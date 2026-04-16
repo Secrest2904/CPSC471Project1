@@ -1,16 +1,25 @@
 from socket import *
+import os
 
 serverName = "localhost"
 serverPort = 12000
 
 clientSocket = socket(AF_INET, SOCK_STREAM)
+dataSocket = socket(AF_INET, SOCK_STREAM)
 
 clientSocket.connect((serverName, serverPort))
 
-data = "Hello, this is a test string. Now what happens if I make it extremely long and potentially exceed the socket send length"
-bytessent = 0
+while True:
+    command = str(input(">> "))
+    task = command.strip().split()
+    if task == "quit":
+        break
 
-while bytessent != len(data):
-    bytessent += clientSocket.send(data[bytessent:].encode())
+#    dataSocket.bind(("", 0))
+#    dataSocket.listen(1)
+#    port = dataSocket.getsockname()[1]
+#    dataSocket.connect((serverName, port))
+    if task == "ls":
+        dataSocket.send("ls".encode())
 
 clientSocket.close()
