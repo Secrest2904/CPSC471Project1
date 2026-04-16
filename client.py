@@ -1,5 +1,12 @@
 from socket import *
 import os
+import sys
+
+HEADER_SIZE = 10
+PACKET_SIZE = 4096
+
+os.makedirs("cloud", exist_ok=True)
+os.makedirs("download", exist_ok=True)
 
 serverName = "localhost"
 serverPort = 12000
@@ -9,8 +16,6 @@ clientSocket = socket(AF_INET, SOCK_STREAM)
 
 def sendData(string):
     dataSocket = socket(AF_INET, SOCK_STREAM)
-    dataSocket.bind(("", 0))
-    dataSocket.listen(1)
     port = dataSocket.getsockname()[1]
     dataSocket.connect((serverName, port))
     dataSocket.send(string)
