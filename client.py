@@ -4,9 +4,11 @@ import sys
 
 HEADER_SIZE = 10
 PACKET_SIZE = 4096
+DOWNLOAD_DIRECTORY = "Downloads_471"
 
-os.makedirs("cloud", exist_ok=True)
-os.makedirs("download", exist_ok=True)
+def check_directory():
+    os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
+
 
 serverName = "localhost"
 serverPort = 12000
@@ -14,12 +16,17 @@ serverPort = 12000
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
 
-def sendData(string):
-    dataSocket = socket(AF_INET, SOCK_STREAM)
-    port = dataSocket.getsockname()[1]
-    dataSocket.connect((serverName, port))
-    dataSocket.send(string)
-    dataSocket.close()
+def sendMessage(sock, payload: bytes):
+    header = f"{len(payload):<{HEADER_SIZE}}".encode()
+
+def recv_exact(sock, num_bytes):
+    data = b""
+    while len(data) < num_bytes:
+        chunk = sock.recv(num_bytes - len(data))
+        if not chunk:
+            return None
+        data += chunk
+    return data
 
 def fileAccess(filename):
     try:
