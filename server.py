@@ -34,13 +34,28 @@ def recv_message(sock):
 
     return recv_exact(sock, msg_len)
 
-
 def connect_data_socket(client_ip, client_port):
     data_sock = socket(AF_INET, SOCK_STREAM)
     data_sock.connect((client_ip, client_port))
     return data_sock
 
+def handle_ls(control_sock, client_ip, data_port):
+    try:
+        entries = os.listdir(CLOUD_DIR)
+        entries.sort()
+        listing = "\n".join(entries)
+        if listing:
+            listing += "\n"
 
+        data_sock = connect_data_socket(client_ip, data_port)
+        send_message(data_sock, listing.encode())
+        data_sock.close()
+
+        send_message(control_sock, b"OK LS")
+        print("SUCCESS: ls")
+    except Exception as e:
+        send_message(control_sock, f"ERR LS {e}".encode())
+        print(f"FAILURE: ls -> {e}")
 
 while True:
     connectionSocket, addr = serverSocket.accept()
