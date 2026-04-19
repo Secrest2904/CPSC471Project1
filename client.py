@@ -59,6 +59,43 @@ def receive_listening(listener):
     else:
         print("No files on the server")
 
+def receive_file(listener, filename, expected_size):
+    filepath = os.path.join(DOWNLOAD_DIRECTORY, filename)
+    dataConnection, _ = listener.accept()
+
+    bytes_received = 0
+    with open(filepath, "wb") as receivedFile:
+        while bytes_received < expected_size:
+            chunk = dataConnection.recv(min(PACKET_SIZE, expected_size - bytes_received))
+            if not chunk:
+                break
+            receive_file.write(chunk)
+            bytes_received += len(chunk)
+    dataConnection.close()
+    listener.close()
+    print(f"{filename} {bytes_received} bytes successfully sent")
+    print(f"Saved to: {filepath}")
+
+def send_file(listener, filename):
+    dataConnection, _ = listener.accept()
+
+    file_size = os.path.getsize(filename)
+    size_header = f"{file_size:<{HEADER_SIZE}}".encode()
+    dataConnection.sendall(size_header)
+
+    bytes_sent = 0
+    with open(filename, "rb") as writeFile:
+        while True:
+            chunk = f.read(PACKET_SIZE)
+            if not chunk:
+                break
+            dataConnection.sendall(chunk)
+            bytes_sent += len(chunk)
+    dataConnection.close()
+    listener.close()
+
+    print(f"Successfully transferred {filename} as {bytes_sent} bytes")
+
 while True:
     command = str(input(">> "))
     task = command.strip().split()
