@@ -4,17 +4,43 @@ import sys
 
 HEADER_SIZE = 10
 PACKET_SIZE = 4096
+CLOUD_DIR = "cloud"
 
-os.makedirs("cloud", exist_ok=True)
-os.makedirs("download", exist_ok=True)
+def ensure_server_dirs():
+    os.makedirs(CLOUD_DIR, exist_ok=True)
+
+def recv_exact(sock, num_bytes):
+    data = b""
+    while len(data) < num_bytes:
+        chunk = sock.recv(num_bytes - len(data))
+        if not chunk:
+            return None
+        data += chunk
+    return data
+
+def send_message(sock, payload: bytes):
+    header = f"{len(payload):<{HEADER_SIZE}}".encode()
+    sock.sendall(header + payload)
+
+def recv_message(sock):
+    header = recv_exact(sock, HEADER_SIZE)
+    if not header:
+        return None
+
+    try:
+        msg_len = int(header.decode().strip())
+    except ValueError:
+        return None
+
+    return recv_exact(sock, msg_len)
 
 
-serverport = 12000
-serverSocket = socket(AF_INET, SOCK_STREAM)
-serverSocket.bind(('', serverport))
-serverSocket.listen(1)
+def connect_data_socket(client_ip, client_port):
+    data_sock = socket(AF_INET, SOCK_STREAM)
+    data_sock.connect((client_ip, client_port))
+    return data_sock
 
-print(f"Server is live and listening on port {serverport}")
+
 
 while True:
     connectionSocket, addr = serverSocket.accept()
