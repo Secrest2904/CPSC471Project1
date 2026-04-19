@@ -9,15 +9,12 @@ DOWNLOAD_DIRECTORY = "Downloads_471"
 def check_directory():
     os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
 
-
-serverName = "localhost"
-serverPort = 12000
-
 clientSocket = socket(AF_INET, SOCK_STREAM)
 
 
 def sendMessage(sock, payload: bytes):
     header = f"{len(payload):<{HEADER_SIZE}}".encode()
+    sock.sendall(header + payload)
 
 def recv_exact(sock, num_bytes):
     data = b""
@@ -40,7 +37,7 @@ def recv_message(sock):
 
 def data_listener():
     listener = socket(AF_INET, SOCK_STREAM)
-    listener.bind("", 0)
+    listener.bind(("", 0))
     listener.listen(1)
     port = listener.getsockname()[1]
     return listener, port
@@ -69,7 +66,7 @@ def receive_file(listener, filename, expected_size):
             chunk = dataConnection.recv(min(PACKET_SIZE, expected_size - bytes_received))
             if not chunk:
                 break
-            receive_file.write(chunk)
+            receivedFile.write(chunk)
             bytes_received += len(chunk)
     dataConnection.close()
     listener.close()
@@ -149,16 +146,47 @@ def main():
                     listener.close()
                     continue
                 reply_text = reply.decode()
-                if not reply_text.startswith("OK PUT"):
+                if not reply_text.startswith("OK GET"):
                     print(reply_text)
                     listener.close()
                     continue
                 
+                reply_parts = reply_text.split()
+                expected_size = int(reply_parts[-1])
+                receive_file(listener, filename, expected_size)
+
+            elif cmd == "put":
+                if len(parts) != 2:
+                    print("Usage: put <filename>")
+                    continue
+
+                filename = parts[1]
+                if not os.path.isfile(filename):
+                    print(f"File not found: {filename}")
+                    continue
+
+                listener, data_port = data_listener()
+                sendMessage(control_sock, f"put {filename} {data_port}".encode())
+
+                reply = recv_message(control_sock)
+                if reply is None:
+                    print("No reply from server")
+                    listener.close()
+                    continue
+
+                reply_text = reply.decode()
+                if not reply_text.startswith("OK PUT"):
+                    print(reply_text)
+                    listener.close()
+                    continue
+
                 send_file(listener, filename)
 
                 final_reply = recv_message(control_sock)
                 if final_reply:
                     print(final_reply.decode())
+
+
 
             else:
                 print("Invalid Command, commands are ls, get <filename>, put <filename>, and quit")

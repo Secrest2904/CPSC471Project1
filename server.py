@@ -125,7 +125,7 @@ def main():
     ensure_server_dirs()
     server_port = int(sys.argv[1])
     server_socket = socket(AF_INET, SOCK_STREAM)
-    server_socket.bind({"", server_port})
+    server_socket.bind(("", server_port))
     server_socket.listen(1)
 
     print(f"Server listening on port {server_port}")
