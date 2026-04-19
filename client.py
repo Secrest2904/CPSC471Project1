@@ -86,7 +86,7 @@ def send_file(listener, filename):
     bytes_sent = 0
     with open(filename, "rb") as writeFile:
         while True:
-            chunk = f.read(PACKET_SIZE)
+            chunk = writeFile.read(PACKET_SIZE)
             if not chunk:
                 break
             dataConnection.sendall(chunk)
@@ -96,26 +96,74 @@ def send_file(listener, filename):
 
     print(f"Successfully transferred {filename} as {bytes_sent} bytes")
 
-while True:
-    command = str(input(">> "))
-    task = command.strip().split()
-    if task[0] == "quit":
-        break
-    elif task[0] == "ls":
-        sendData("ls")
-    elif task[0] == "get":
-        try:
-            sendData(task)
-            print("File request sent to the server")
-        except:
-            print("Unable to send data to the server")
-    elif task[0] == "put":
-        try:
-            sendData(fileAccess(task[1]))
-            print(f"Successfully sent file: {task[1]}")
-        except:
-            print(f"File {task[1]} failed to send")
-    else:
-        print("Please use the following commands: quit, ls, get 'filename', or put 'filename'")
+def main():
+    if len(sys.argv) != 3:
+        print("Error: run python client.py <server machine ie. localhost> <port number ie. 12000>")
+        sys.exit(1)
+    check_directory()
+    serverName = sys.argv[1]
+    serverPort = int(sys.argv[2])
 
-clientSocket.close()
+    control_sock = socket(AF_INET, SOCK_STREAM)
+    control_sock.connect((serverName, serverPort))
+
+    print(f"Connected to {serverName}:{serverPort}")
+    print(f"Download directory: {DOWNLOAD_DIRECTORY}/")
+
+    try:
+        while True:
+            command = input(">> ").strip()
+            if not command:
+                continue
+            parts = command.split()
+            cmd = parts[0].lower()
+
+            if cmd == "quit":
+                sendMessage(control_sock, b"quit")
+                reply = recv_message(control_sock)
+                if reply:
+                    print(reply.decode())
+                break
+            elif cmd == "ls":
+                if len(parts) != 1:
+                    print("ls should be used on its own")
+                    continue
+                listener, data_port = data_listener()
+                sendMessage(control_sock, f"ls {data_port}".encode())
+                receive_listening(listener)
+                reply = recv_message(control_sock)
+                if reply:
+                    print(reply.decode())
+            
+            elif cmd == "get":
+                if len(parts) != 2:
+                    print ("Usage: get <filename>")
+                    continue
+                filename = parts[1]
+                listener, data_port = data_listener()
+                sendMessage(control_sock, f"get {filename} {data_port}".encode())
+
+                reply = recv_message(control_sock)
+                if reply is None:
+                    print("No reply from server")
+                    listener.close()
+                    continue
+                reply_text = reply.decode()
+                if not reply_text.startswith("OK PUT"):
+                    print(reply_text)
+                    listener.close()
+                    continue
+                
+                send_file(listener, filename)
+
+                final_reply = recv_message(control_sock)
+                if final_reply:
+                    print(final_reply.decode())
+
+            else:
+                print("Invalid Command, commands are ls, get <filename>, put <filename>, and quit")
+    finally:
+        control_sock.close()
+
+if __name__ == "__main__":
+    main()
