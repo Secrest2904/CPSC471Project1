@@ -117,16 +117,71 @@ def handle_put(control_sock, client_ip, data_port, filename):
 
 
 
-while True:
-    connectionSocket, addr = serverSocket.accept()
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python server.py <PORTNUMBER ie. 12000>")
+        sys.exit(1)
+    
+    ensure_server_dirs()
+    server_port = int(sys.argv[1])
+    server_socket = socket(AF_INET, SOCK_STREAM)
+    server_socket.bind({"", server_port})
+    server_socket.listen(1)
 
-    data = b""
+    print(f"Server listening on port {server_port}")
+    print(f"Cloud directory: {CLOUD_DIR}/")
 
     while True:
-        tmpBuff = connectionSocket.recv(40)
-        if not tmpBuff:
-            break
-        data += tmpBuff
+        control_sock, addr = server_socket.accept()
+        client_ip = addr[0]
+        print(f"Control connection from {client_ip}:{addr[1]}")
 
-    print(data.decode())
-    connectionSocket.close()
+        try:
+            while True:
+                payload = recv_message(control_sock)
+                if payload is None:
+                    break
+
+                message = payload.decode().strip()
+                parts = message.split()
+
+                if not parts:
+                    send_message(control_sock, b"Error: Empty Command")
+                    continue
+
+                cmd = parts[0].lower()
+
+                if cmd == "quit":
+                    send_message(control_sock, b"OK QUIT")
+                    print ("Successfully quit")
+                    break
+
+                elif cmd == "ls":
+                    if len(parts) != 2:
+                        send_message(control_sock, b"Error Usage: ls <port>")
+                        continue
+                    data_port = int(parts[1])
+                    handle_ls(control_sock, client_ip, data_port)
+                
+                elif cmd == "get":
+                    if len(parts) != 3:
+                        send_message(control_sock, b"Error Usage: get <filename> <port>")
+                        continue
+                    filename = parts[1]
+                    data_port = int(parts[2])
+                    handle_get(control_sock, client_ip, data_port, filename)
+                
+                elif cmd == "put":
+                    if len(parts) != 3:
+                        send_message(control_sock, b"Error Usage: put <filename> <port>")
+                        continue
+                    filename = parts[1]
+                    data_port = int(parts[2])
+                    handle_put(control_sock, client_ip, data_port, filename)
+                else:
+                    send_message(control_sock, b"Error: Unknown Command")
+        finally:
+            control_sock.close()
+            print("Connection closed")
+if __name__ == "__main__":
+    main()
