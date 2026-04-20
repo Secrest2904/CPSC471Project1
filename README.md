@@ -1,6 +1,6 @@
 Team Members:
     
-    Adam Secrest -
+    Adam Secrest - Adam.secrest@csu.fullerton.edu
     
     Nathan Dulkis - ndulkis@csu.fullerton.edu
     
