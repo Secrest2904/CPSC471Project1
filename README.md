@@ -1,6 +1,8 @@
 Team Members:
     Adam Secrest -
+    
     Nathan Dulkis - ndulkis@csu.fullerton.edu
+    
     Karl Orquita - karl.orquita@csu.fullerton.edu
 
 Language: 
